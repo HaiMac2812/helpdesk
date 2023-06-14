@@ -81,12 +81,12 @@
 
     </record>
 
-    <record id="helpdesk_ticket_sla_action" model="ir.actions.act_window">
+    <!-- <record id="helpdesk_ticket_sla_action" model="ir.actions.act_window">
         <field name="name">SLA</field>
         <field name="type">ir.actions.act_window</field>
-        <field name="res_model">helpdesk.ticket.sla</field>
+        <field name="res_model">helpdesk.ticket</field>
         <field name="view_mode">tree,form</field>
-    </record>
+    </record> -->
 
     <!-- <record id ="helpdesk_sub_ticket_action" model="ir.actions.act_window">
         <field name="name">Sub Ticket</field>
@@ -100,17 +100,30 @@
         <field name="res_model">helpdesk.ticket.summerize</field>
         <field name="view_mode">tree,form,graph</field>
     </record> -->
+ 
+
+    <!-- <record id="helpdesk_ticket_sla_graph" model="ir.ui.view">
+        <field name="name">view.helpdesk.sla.graph</field>
+        <field name="model">helpdesk.ticket.sla</field>
+        <field name="arch" type="xml">
+            <graph>
+            
+            <field name="status" type = "row"  />
+            <field name="name" type = "row"  />
+                
+                
+            </graph>
+        </field>
+    </record> -->
+
     <record id ="helpdesk_ticket_sla_summerize_action" model="ir.actions.act_window">
         <field name="name">Trạng thái</field>
         <field name="type">ir.actions.act_window</field>
-        <field name="res_model">helpdesk.ticket.sla</field>
-        <field name="view_mode">tree,graph</field>
+        <field name="res_model">helpdesk.ticket</field>
+        <field name="view_id" ref="helpdesk_ticket_sla1"/>
+        <field name="view_mode">tree</field>
         <!-- <field name ="view_id" ref ="helpdesk_ticket_sla_graph"/> -->
-
-
     </record>
-
-
     
 
     <!-- Menus -->
@@ -228,13 +241,13 @@
         action="helpdesk_ticket_pipeline_action"
         sequence="85"
     />
-    <menuitem
+    <!-- <menuitem
         id="helpdesk_ticket_sla_menu"
         name="SLA"
         parent="helpdesk_ticket_config_main_menu"
         action="helpdesk_ticket_sla_action"
         sequence="95"
-    />
+    /> -->
     <!-- <menuitem
         id="helpdesk_ticket_sub_ticket_menu"
         name="Sub Tickets"
@@ -259,20 +272,7 @@
 />
 
 
-    <record id="helpdesk_ticket_sla_graph" model="ir.ui.view">
-        <field name="name">view.helpdesk.sla.graph</field>
-        <field name="model">helpdesk.ticket.sla</field>
-        <field name="arch" type="xml">
-            <graph>
-            
-            <field name="status" type = "row"  />
-            <field name="name" type = "row"  />
-                
-                
-            </graph>
-        </field>
-    </record>
-
+   
 
 
 

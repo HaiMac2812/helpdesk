@@ -24,7 +24,6 @@
         "views/res_partner_views.xml",
         "views/res_config_settings_views.xml",
         "views/helpdesk_ticket_templates.xml",
-        "views/helpdesk_ticket_menu.xml",
         "views/helpdesk_ticket_team_views.xml",
         "views/helpdesk_ticket_stage_views.xml",
         "views/helpdesk_ticket_difficulty_views.xml",
@@ -35,8 +34,9 @@
         "views/helpdesk_ticket_tag_views.xml",
         "views/helpdesk_ticket_views.xml",
         "views/helpdesk_dashboard_views.xml",
-       
-        "views/helpdesk_ticket_mother_category_views.xml",
+        "views/helpdesk_ticket_summerize_views.xml",
+        "views/helpdesk_ticket_mother_category_views.xml", 
+        "views/helpdesk_ticket_menu.xml",
         
          
     ],

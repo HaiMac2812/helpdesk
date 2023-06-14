@@ -1,6 +1,7 @@
+import datetime
 from odoo import _, api, fields, models, tools
 from odoo.exceptions import AccessError , UserError
-
+from datetime import timedelta
 
 class HelpdeskTicket(models.Model):
     _name = "helpdesk.ticket"
@@ -70,19 +71,7 @@ class HelpdeskTicket(models.Model):
         ondelete="restrict",
         index=True,
         copy=False,
-       
     )
-    from odoo import fields, models
-
-
-   
-
-
-    pipeline_id = fields.Many2one( comodel_name= "helpdesk.ticket.pipeline", related="team_id.pipeline_id")
-
-    sla_id = fields.One2many( comodel_name= "helpdesk.ticket.sla", inverse_name="ticket_id" , string="SLA")
-    # sla_status = fields.Selection([('in_progres' , 'In Progress') , ('failed' , 'Failed') , ('success' , 'Success')], string="SLA Status",  compute = "_compute_sla_status"  , store = True)
-    
 
     partner_id = fields.Many2one(comodel_name="res.partner"  , string="Contact" )
                                 #  compute= "_compute_partner_name" , inverse = "_inverse_partner_id")
@@ -118,7 +107,6 @@ class HelpdeskTicket(models.Model):
     team_id = fields.Many2one(
         comodel_name="helpdesk.ticket.team",
         string="Team",
-    
     )
     priority = fields.Selection(
         selection=[
@@ -129,16 +117,6 @@ class HelpdeskTicket(models.Model):
         ],
         default="1",
     )
-    Evaluate = fields.Selection(
-        selection=[
-            ("0", "Không Hài Lòng"),
-            ("1", "Hài Lòng"),
-            ("2", "Rất Hài Lòng"),
-            
-        ],
-        default="1",
-    )
-    
     attachment_ids = fields.One2many(
         comodel_name="ir.attachment",
         inverse_name="res_id",
@@ -161,6 +139,62 @@ class HelpdeskTicket(models.Model):
     previous_stage_id = fields.Many2one( comodel_name="helpdesk.ticket.stage" , compute= "_compute_previous_stage_id" ,string="Previous Stage" , store = True)
     next_stage_id = fields.Many2one( comodel_name="helpdesk.ticket.stage", compute= "_compute_next_stage_id" ,  string="Next Stage" , store = True)
 
+    name_sla = fields.Char()
+    status = fields.Selection([('in_progress', 'In Progress'), ('success', 'Success'), ('fail', 'Failed')], default='in_progress',compute="_compute_status", readonly=True)
+    sla_model_id = fields.Many2one("helpdesk.ticket.sla.model", string="Kiến trúc SLA")
+    from_stage_id = fields.Many2one(comodel_name="helpdesk.ticket.stage", string="Trạng thái bắt đầu")
+    to_stage_id = fields.Many2one(comodel_name="helpdesk.ticket.stage", string="Trạng thái kết thúc")
+
+    # ticket_id = fields.Many2one(comodel_name="helpdesk.ticket", string="Yêu cầu")
+    # start_date = fields.Datetime(string="Start Date")
+    # end_date = fields.Datetime(string="End Date")
+    # ticket_id = fields.Many2one(comodel_name="helpdesk.ticket", string="Yêu cầu", )
+    explaination = fields.Text(string="Giải trình")
+    sla_time = fields.Float(related = "sla_model_id.timelimit" ,string="Thời gian mẫu", widget ="float_time" )
+    deadline_datetime = fields.Datetime(string="Thời hạn", compute="_compute_dealinetime", store=True)
+
+    @api.model
+    def create(self, vals):
+        # Tạo bản ghi mới
+        record = super(HelpdeskTicket, self).create(vals)
+        
+        # Tính toán và cập nhật trường deadline_datetime
+        if record.status_stage and record.status_stage == 'In Progress' and record.sla_time:
+            created_datetime = datetime.now()
+            deadline_datetime = created_datetime + timedelta(hours=record.sla_time)
+            record.deadline_datetime = deadline_datetime
+
+        return record
+    
+    @api.depends("status_stage", "sla_time")
+    def _compute_dealinetime(self):
+        for record in self:
+            if record.status_stage and record.status_stage == "['New']" or not record.status_stage and record.sla_time:
+                record.deadline_datetime = False
+            elif record.status_stage and record.status_stage == "['In Progress']" and record.sla_time:
+                if not record.deadline_datetime:
+                    created_datetime = fields.Datetime.now()
+                    deadline_datetime = created_datetime + timedelta(hours=record.sla_time)
+                    record.deadline_datetime = fields.Datetime.to_string(deadline_datetime)
+                else: 
+                    record.deadline_datetime =  record.deadline_datetime
+            else:
+                record.deadline_datetime =  record.deadline_datetime
+
+
+    @api.depends("deadline_datetime","status_stage")
+    def _compute_status(self):
+        for record in self:
+            if record.deadline_datetime:
+                time_now = fields.Datetime.now()
+                original_status = record.status
+                if record.status_stage == "['Done']":
+                    record.status = 'success' 
+                elif time_now > record.deadline_datetime and record.status != 'success':
+                        record.status = 'fail'
+                else: record.status = 'in_progress'
+            else: record.status = 'in_progress'
+
 
     # sub_ticket = fields.Many2many(comodel_name="helpdesk.ticket" , string="Sub Ticket")
     parent_ticket = fields.Many2one('helpdesk.ticket', string='Parent')
@@ -170,6 +204,22 @@ class HelpdeskTicket(models.Model):
     active_time = fields.Float(string='Active Time', store=True, widget = 'float_time')
     active_status = fields.Boolean(string='Active Status', store=True)
     
+
+    
+    status_stage = fields.Char(string="Liên quan đến SLA", compute="_compute_stage")
+
+    @api.depends("stage_id.name")
+    def _compute_stage(self):
+        for record in self:
+            if record.stage_id:
+                record.status_stage = record.stage_id.mapped('name')
+
+    pipeline_id = fields.Many2one( comodel_name= "helpdesk.ticket.pipeline", related="team_id.pipeline_id")
+    # ticket_idd = fields.Many2many("helpdesk.ticket", string="Model ticket")
+    # sla_id = fields.One2many( comodel_name= "helpdesk.ticket.sla", inverse_name="ticket_id" , string="SLA")
+    # sla_status = fields.Selection([('in_progres' , 'In Progress') , ('failed' , 'Failed') , ('success' , 'Success')], string="SLA Status",  compute = "_compute_sla_status"  , store = True)
+    
+
 
     def name_get(self):
         res = []
@@ -197,17 +247,14 @@ class HelpdeskTicket(models.Model):
                 self.write({"previous_stage_id": record.id})
 
 
+    
 
         #  holding  code temporary
         # print ("start counting SLA")
         sla_success_count = 0
         sla_failed_count = 0
-        for sla in self.sla_id:
+        for sla in self:
             # print(   self.team_id.pipeline_id.stages)
-            
-            
-
-            
             if self.stage_id == sla.to_stage_id and self.previous_stage_id == sla.from_stage_id:
                 
                 if self.assigned_date :
@@ -231,7 +278,7 @@ class HelpdeskTicket(models.Model):
                         # print("1.2:", sla.status)
                 
               
-                elif self.assigned_date  and self.sla_id:
+                elif self.assigned_date  and self.ticket_idd:
                     delta = fields.Datetime.now()  - self.stage_move_date
                     delta = delta.total_seconds() / 3600.0
 
@@ -531,7 +578,7 @@ class HelpdeskTicket(models.Model):
     #     return res
 
 
-    
+
 
 
 
@@ -556,4 +603,3 @@ def _notify_get_reply_to(
                 )
             )
         return res
-
